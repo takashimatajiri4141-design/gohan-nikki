@@ -198,6 +198,26 @@ textarea::placeholder, input::placeholder { color: var(--text-faint); }
 .more-btn { width: 100%; margin-top: .7rem; padding: .65rem; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-size: .82rem; }
 .more-btn:hover { background: var(--surface-2); }
 
+.usual-btn {
+  width: 100%; margin-top: .6rem; padding: .6rem .8rem; border: 1px solid var(--meal-color);
+  border-radius: var(--radius-sm); background: transparent; color: var(--text);
+  font-size: .85rem; display: flex; align-items: baseline; gap: .5rem; text-align: left;
+}
+.usual-btn:hover { background: var(--surface-2); }
+.usual-btn .lead { color: var(--meal-color); font-weight: 700; flex: 0 0 auto; }
+.usual-btn .body { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usual-btn .at { margin-left: auto; padding-left: .4rem; flex: 0 0 auto; color: var(--text-faint); font-size: .78rem; font-variant-numeric: tabular-nums; }
+
+.sug-wrap { display: flex; flex-direction: column; gap: .35rem; }
+.sug-label { font-size: .72rem; color: var(--text-faint); }
+.sug-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+.sug-chip {
+  font-size: .8rem; background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-muted); border-radius: 999px; padding: .35rem .7rem;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sug-chip:hover { color: var(--text); border-color: var(--border-strong); }
+
 .data-section { margin-top: 2.4rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
 .data-title { font-size: .85rem; font-weight: 700; color: var(--text-muted); margin-bottom: .5rem; }
 .data-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
@@ -369,11 +389,77 @@ function showToast(text) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
 
+// 履歴がまだ無いときに出す初期の定番
+const STARTER_USUAL = {
+  breakfast: { items: 'バナナ半分、カップヨーグルト1つ', time: '06:40' },
+};
+
+// 同じ内容を何回・いつ食べたかを数え、よく食べる順に並べる
+function collectSuggestions(mealKey) {
+  const byItems = new Map();
+  Object.keys(state.store.days).forEach(date => {
+    const day = state.store.days[date];
+    const arr = (day && day.meals && day.meals[mealKey]) || [];
+    arr.forEach(e => {
+      const key = String(e.items || '').trim();
+      if (!key) return;
+      const hit = byItems.get(key) || { items: key, count: 0, lastDate: '', times: [] };
+      hit.count++;
+      if (date > hit.lastDate) hit.lastDate = date;
+      if (e.time) hit.times.push(e.time);
+      byItems.set(key, hit);
+    });
+  });
+  const list = [...byItems.values()];
+  list.forEach(s => { s.time = modeOf(s.times); });
+  list.sort((a, b) => (b.count - a.count) || (a.lastDate < b.lastDate ? 1 : -1));
+  return list;
+}
+
+// いちばん多く出てくる値（同数なら先に出たもの）
+function modeOf(values) {
+  if (!values || values.length === 0) return '';
+  const counts = new Map();
+  let best = values[0];
+  let bestN = 0;
+  values.forEach(v => {
+    const n = (counts.get(v) || 0) + 1;
+    counts.set(v, n);
+    if (n > bestN) { bestN = n; best = v; }
+  });
+  return best;
+}
+
+// 「いつもの」＝3回以上食べている定番。まだ定番が無い食事は初期値を使う
+function getUsual(mealKey) {
+  const list = collectSuggestions(mealKey);
+  if (list.length > 0 && list[0].count >= 3) {
+    return { items: list[0].items, time: list[0].time || '' };
+  }
+  return STARTER_USUAL[mealKey] || null;
+}
+
 function renderForm(date, meal, entry) {
   const time = entry ? entry.time : nowTime();
   const items = entry ? entry.items : '';
   const memo = entry ? entry.memo : '';
+
+  let sugs = collectSuggestions(meal).slice(0, 8);
+  if (sugs.length === 0 && STARTER_USUAL[meal]) {
+    sugs = [{ items: STARTER_USUAL[meal].items, time: STARTER_USUAL[meal].time, count: 0 }];
+  }
+  state.formSuggestions = sugs;
+  const chips = sugs.length
+    ? '<div class="sug-wrap"><div class="sug-label">これまでの記録から</div><div class="sug-row">'
+      + sugs.map((s, i) =>
+          '<button type="button" class="sug-chip" data-action="use-suggestion" data-idx="' + i + '">'
+          + esc(s.items.replace(/\n/g, ' / ')) + '</button>'
+        ).join('')
+      + '</div></div>'
+    : '';
+
   return '<div class="entry-form" data-date="' + date + '" data-meal="' + meal + '" data-entry-id="' + (entry ? entry.id : '') + '">'
+    + chips
     + '<textarea class="f-items" rows="2" placeholder="何を食べましたか（例：ご飯、味噌汁、焼き鮭）">' + esc(items) + '</textarea>'
     + '<div class="form-row">'
     + '<input class="f-time" type="time" value="' + esc(time) + '">'
@@ -409,9 +495,19 @@ function renderMealSection(mt, date, day) {
     ? '<button type="button" class="add-btn" data-action="open-add" data-meal="' + mt.key + '">＋ ' + mt.label + 'を記録</button>'
     : '';
 
+  // その食事がまだ空のときだけ「いつもの」を出す（二重に記録しないため）
+  const usual = (!isEditingHere && entries.length === 0) ? getUsual(mt.key) : null;
+  const usualBtn = usual
+    ? '<button type="button" class="usual-btn" data-action="quick-add" data-meal="' + mt.key + '">'
+      + '<span class="lead">いつもの</span>'
+      + '<span class="body">' + esc(usual.items.replace(/\n/g, ' / ')) + '</span>'
+      + (usual.time ? '<span class="at">' + esc(usual.time) + '</span>' : '')
+      + '</button>'
+    : '';
+
   return '<section class="meal-section" style="--meal-color:var(--meal-' + mt.key + ')">'
     + '<h2 class="meal-label"><span class="meal-dot"></span>' + mt.label + '</h2>'
-    + rows + emptyMsg + formHtml + addBtn
+    + rows + emptyMsg + formHtml + usualBtn + addBtn
     + '</section>';
 }
 
@@ -528,6 +624,26 @@ function deleteEntry(date, meal, entryId) {
   if (saveStore()) render();
 }
 
+// 「いつもの」を1タップで記録する
+function quickAddUsual(mealKey) {
+  const usual = getUsual(mealKey);
+  if (!usual) return;
+  const date = state.selectedDate;
+  const day = state.store.days[date] || freshDay(date);
+  if (!day.meals) day.meals = { breakfast: [], lunch: [], dinner: [], snack: [] };
+  if (!Array.isArray(day.meals[mealKey])) day.meals[mealKey] = [];
+  day.meals[mealKey].push({ id: uid(), time: usual.time || nowTime(), items: usual.items, memo: '' });
+  day.date = date;
+  day.updatedAt = new Date().toISOString();
+  state.store.days[date] = day;
+  if (saveStore()) {
+    state.editing = null;
+    render();
+    const mt = MEAL_TYPES.find(m => m.key === mealKey);
+    showToast((mt ? mt.label : '') + 'に記録しました');
+  }
+}
+
 function buildExportText() {
   const dates = loggedDates();
   const lines = ['ごはん日記 書き出し（' + dateShortLabel(todayStr()) + ' 時点）', ''];
@@ -637,6 +753,16 @@ document.addEventListener('click', ev => {
   } else if (action === 'cancel-form') {
     state.editing = null;
     render();
+  } else if (action === 'quick-add') {
+    quickAddUsual(t.dataset.meal);
+  } else if (action === 'use-suggestion') {
+    const sug = (state.formSuggestions || [])[Number(t.dataset.idx)];
+    const ta = document.querySelector('.entry-form .f-items');
+    if (sug && ta) {
+      ta.value = sug.items;
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
   } else if (action === 'save-entry') {
     saveEntry();
   } else if (action === 'delete-entry') {
