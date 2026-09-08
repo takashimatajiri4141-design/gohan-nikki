@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ごはん日記</title>
+<meta name="description" content="毎日の朝食・昼食・夕食・間食を記録する、自分専用の食事日記">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ごはん日記">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#F7F5EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C1A17" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<style>
+:root {
+  --bg: #F7F5EF;
+  --surface: #FFFFFF;
+  --surface-2: #F1EEE6;
+  --text: #242220;
+  --text-muted: #6B6560;
+  --text-faint: #9C958A;
+  --accent: #C1441E;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #F3DDD3;
+  --good: #4C6A43;
+  --good-soft: #E4EBE0;
+  --border: #E4DFD3;
+  --border-strong: #D3CCBC;
+
+  --meal-breakfast: #B87A20;
+  --meal-lunch: #3C7A75;
+  --meal-dinner: #52447D;
+  --meal-snack: #A8546C;
+
+  --font-display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  --font-body: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow-card: 0 1px 2px rgba(36,34,32,0.05), 0 1px 1px rgba(36,34,32,0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C1A17;
+    --surface: #252220;
+    --surface-2: #2C2925;
+    --text: #F3EFE7;
+    --text-muted: #A69E92;
+    --text-faint: #7A7468;
+    --accent: #E2703A;
+    --accent-ink: #241206;
+    --accent-soft: #40261C;
+    --good: #93B487;
+    --good-soft: #313E2B;
+    --border: #3B362F;
+    --border-strong: #4A443B;
+
+    --meal-breakfast: #D9A855;
+    --meal-lunch: #6FAFA9;
+    --meal-dinner: #9285C7;
+    --meal-snack: #CE8CA0;
+
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.24);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1C1A17;
+  --surface: #252220;
+  --surface-2: #2C2925;
+  --text: #F3EFE7;
+  --text-muted: #A69E92;
+  --text-faint: #7A7468;
+  --accent: #E2703A;
+  --accent-ink: #241206;
+  --accent-soft: #40261C;
+  --good: #93B487;
+  --good-soft: #313E2B;
+  --border: #3B362F;
+  --border-strong: #4A443B;
+
+  --meal-breakfast: #D9A855;
+  --meal-lunch: #6FAFA9;
+  --meal-dinner: #9285C7;
+  --meal-snack: #CE8CA0;
+
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.24);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font-body); margin: 0;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, p { margin: 0; }
+button, input, textarea { font: inherit; color: inherit; }
+button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+::selection { background: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wrap {
+  max-width: 560px; margin: 0 auto;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.4rem);
+  padding-left: calc(env(safe-area-inset-left, 0px) + 1.1rem);
+  padding-right: calc(env(safe-area-inset-right, 0px) + 1.1rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 3rem);
+}
+
+.app-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 1.3rem 0 .9rem; border-bottom: 1px solid var(--border); margin-bottom: 1.1rem;
+}
+.app-title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: .02em; }
+.streak-pill {
+  font-size: .75rem; font-weight: 700; color: var(--good); background: var(--good-soft);
+  padding: .32rem .7rem; border-radius: 999px; white-space: nowrap;
+}
+
+.date-nav-wrap { margin-bottom: 1.2rem; }
+.date-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: .3rem; }
+.date-nav button {
+  background: var(--surface); border: 1px solid var(--border-strong); width: 2.75rem; height: 2.75rem;
+  border-radius: 50%; color: var(--text-muted); font-size: 1.15rem; display: flex; align-items: center; justify-content: center;
+}
+.date-nav button:disabled { opacity: .35; }
+.date-label { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; min-width: 10em; text-align: center; }
+.today-jump-wrap { display: none; justify-content: center; }
+.today-jump { background: none; border: none; color: var(--accent); font-size: .78rem; font-weight: 700; text-decoration: underline; padding: .2rem; }
+
+.meal-section {
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--meal-color);
+  border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow-card);
+}
+.meal-section + .meal-section { margin-top: .85rem; }
+.meal-label { font-size: 1.02rem; font-weight: 700; display: flex; align-items: center; gap: .55rem; margin-bottom: .2rem; }
+.meal-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--meal-color); flex: 0 0 auto; }
+.meal-empty { font-size: .85rem; color: var(--text-faint); padding: .5rem 0; }
+
+.entry-row { display: flex; align-items: flex-start; gap: .7rem; padding: .55rem 0; border-top: 1px solid var(--border); }
+.entry-row:first-of-type { border-top: none; }
+.entry-time { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .8rem; color: var(--text-muted); flex: 0 0 auto; width: 3em; padding-top: .1rem; }
+.entry-main { flex: 1 1 auto; min-width: 0; }
+.entry-items { font-size: .95rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.entry-memo { font-size: .78rem; color: var(--text-faint); margin-top: .15rem; }
+.entry-actions { flex: 0 0 auto; display: flex; gap: .1rem; }
+.entry-actions button { font-size: .74rem; color: var(--text-faint); background: none; border: none; padding: .4rem .4rem; border-radius: var(--radius-sm); }
+.entry-actions button:hover { color: var(--text); background: var(--surface-2); }
+
+.add-btn {
+  width: 100%; margin-top: .6rem; padding: .6rem; border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-sm); background: transparent; color: var(--accent); font-weight: 700;
+  font-size: .85rem; transition: background-color .15s ease, border-color .15s ease;
+}
+.add-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+.entry-form { margin-top: .7rem; padding-top: .7rem; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: .55rem; }
+.entry-form textarea {
+  font-size: 1rem; padding: .6rem .7rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--text); resize: vertical; min-height: 2.8em; width: 100%;
+}
+.form-row { display: flex; gap: .55rem; }
+.form-row input { font-size: 1rem; padding: .55rem .65rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); min-width: 0; }
+.form-row input[type="time"] { font-variant-numeric: tabular-nums; flex: 0 0 auto; width: 7em; }
+.form-row input[type="text"] { flex: 1 1 auto; }
+textarea::placeholder, input::placeholder { color: var(--text-faint); }
+.form-actions { display: flex; gap: .55rem; justify-content: flex-end; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border: none; border-radius: var(--radius-sm); padding: .55rem 1.1rem; font-weight: 700; font-size: .85rem; }
+.btn-ghost { background: none; border: 1px solid var(--border-strong); color: var(--text-muted); border-radius: var(--radius-sm); padding: .55rem 1.1rem; font-size: .85rem; }
+
+.history-section { margin-top: 2rem; }
+.history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+.history-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; }
+.export-btn { font-size: .78rem; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: .4rem .85rem; }
+.export-btn:hover { color: var(--text); border-color: var(--border-strong); }
+
+.history-row { padding: .7rem .65rem; border-top: 1px solid var(--border); border-radius: var(--radius-sm); margin: 0 -0.65rem; }
+.history-row:first-of-type { border-top: none; }
+.history-row:hover { background: var(--surface-2); }
+.history-row.is-selected { background: var(--accent-soft); }
+.history-date { font-weight: 700; font-size: .9rem; }
+.history-weekday { font-weight: 400; color: var(--text-faint); margin-left: .25rem; font-size: .8rem; }
+.history-pills { display: flex; flex-wrap: wrap; gap: .4rem .5rem; margin-top: .4rem; }
+.history-pill { display: flex; align-items: baseline; gap: .3rem; font-size: .76rem; background: var(--surface-2); border-radius: 999px; padding: .22rem .6rem; max-width: 100%; }
+.history-pill .tag { font-weight: 700; font-size: .74rem; flex: 0 0 auto; }
+.history-pill .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12em; }
+
+.more-btn { width: 100%; margin-top: .7rem; padding: .65rem; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-size: .82rem; }
+.more-btn:hover { background: var(--surface-2); }
+
+.data-section { margin-top: 2.4rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
+.data-title { font-size: .85rem; font-weight: 700; color: var(--text-muted); margin-bottom: .5rem; }
+.data-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.data-btn { font-size: .8rem; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .5rem .85rem; }
+.data-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.data-note { font-size: .74rem; color: var(--text-faint); line-height: 1.6; margin-top: .6rem; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+  transform: translate(-50%, 12px);
+  background: var(--text); color: var(--bg); padding: .65rem 1.1rem; border-radius: 999px;
+  font-size: .82rem; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+  z-index: 50; max-width: 88vw; text-align: center; box-shadow: var(--shadow-card);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="app-header">
+    <h1 class="app-title">ごはん日記</h1>
+    <div id="streakPill" class="streak-pill" style="display:none"></div>
+  </header>
+
+  <div class="date-nav-wrap">
+    <nav class="date-nav">
+      <button type="button" data-action="prev-day" aria-label="前の日">‹</button>
+      <div id="dateLabel" class="date-label"></div>
+      <button type="button" id="nextDayBtn" data-action="next-day" aria-label="次の日">›</button>
+    </nav>
+    <div id="todayJumpWrap" class="today-jump-wrap">
+      <button type="button" class="today-jump" data-action="jump-today">今日に戻る</button>
+    </div>
+  </div>
+
+  <div id="mealSections"></div>
+
+  <section class="history-section">
+    <div class="history-head">
+      <h2 class="history-title">これまでの記録</h2>
+      <button type="button" class="export-btn" data-action="export">書き出す</button>
+    </div>
+    <div id="historyList"></div>
+    <button type="button" id="moreHistoryBtn" class="more-btn" data-action="show-more-history" style="display:none">さらに表示</button>
+  </section>
+
+  <section class="data-section">
+    <h2 class="data-title">データの保管</h2>
+    <div class="data-actions">
+      <button type="button" class="data-btn" data-action="backup">バックアップを保存</button>
+      <button type="button" class="data-btn" data-action="restore">バックアップから復元</button>
+    </div>
+    <p class="data-note">記録はこのiPhoneの中だけに保存されます。機種変更やSafariのデータ削除で消えるので、ときどきバックアップを保存してください(ファイルAppやiCloud Driveに置けます)。</p>
+    <input type="file" id="restoreInput" accept="application/json,.json" style="display:none">
+  </section>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+const MEAL_TYPES = [
+  { key: 'breakfast', label: '朝食' },
+  { key: 'lunch', label: '昼食' },
+  { key: 'dinner', label: '夕食' },
+  { key: 'snack', label: '間食' },
+];
+const WD = ['日','月','火','水','木','金','土'];
+const STORE_KEY = 'gohan-nikki:v1';
+
+const state = {
+  store: { version: 1, days: {} },
+  selectedDate: null,
+  editing: null,
+  historyVisibleCount: 14,
+};
+
+function uid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+function parseDate(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function todayStr() { return fmtDate(new Date()); }
+function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate() + n); return fmtDate(d); }
+function nowTime() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function dateLabel(s) {
+  const d = parseDate(s);
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + WD[d.getDay()] + '）';
+}
+function dateShortLabel(s) {
+  const d = parseDate(s);
+  const now = new Date();
+  if (d.getFullYear() !== now.getFullYear()) {
+    return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function freshDay(date) {
+  return { date, meals: { breakfast: [], lunch: [], dinner: [], snack: [] }, updatedAt: null };
+}
+function getDay(date) { return state.store.days[date]; }
+function hasEntries(day) {
+  if (!day || !day.meals) return false;
+  return Object.keys(day.meals).some(k => Array.isArray(day.meals[k]) && day.meals[k].length > 0);
+}
+function sortedEntries(arr) {
+  return [...arr].sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+}
+function computeStreak() {
+  let d = new Date();
+  let cursor = fmtDate(d);
+  if (!hasEntries(getDay(cursor))) {
+    d.setDate(d.getDate() - 1);
+    cursor = fmtDate(d);
+  }
+  let count = 0;
+  while (hasEntries(getDay(cursor))) {
+    count++;
+    d.setDate(d.getDate() - 1);
+    cursor = fmtDate(d);
+  }
+  return count;
+}
+
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return { version: 1, days: {} };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.days) return { version: 1, days: {} };
+    return { version: 1, days: parsed.days };
+  } catch (e) {
+    console.error(e);
+    return { version: 1, days: {} };
+  }
+}
+function saveStore() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state.store));
+    return true;
+  } catch (e) {
+    console.error(e);
+    showToast('保存できませんでした。端末の空き容量をご確認ください。');
+    return false;
+  }
+}
+
+let toastTimer;
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function renderForm(date, meal, entry) {
+  const time = entry ? entry.time : nowTime();
+  const items = entry ? entry.items : '';
+  const memo = entry ? entry.memo : '';
+  return '<div class="entry-form" data-date="' + date + '" data-meal="' + meal + '" data-entry-id="' + (entry ? entry.id : '') + '">'
+    + '<textarea class="f-items" rows="2" placeholder="何を食べましたか（例：ご飯、味噌汁、焼き鮭）">' + esc(items) + '</textarea>'
+    + '<div class="form-row">'
+    + '<input class="f-time" type="time" value="' + esc(time) + '">'
+    + '<input class="f-memo" type="text" placeholder="メモ（任意）" value="' + esc(memo) + '">'
+    + '</div>'
+    + '<div class="form-actions">'
+    + '<button type="button" class="btn-ghost" data-action="cancel-form">キャンセル</button>'
+    + '<button type="button" class="btn-primary" data-action="save-entry">保存</button>'
+    + '</div></div>';
+}
+
+function renderMealSection(mt, date, day) {
+  const entries = sortedEntries((day.meals && day.meals[mt.key]) || []);
+  const isEditingHere = state.editing && state.editing.date === date && state.editing.meal === mt.key;
+  const editingEntry = isEditingHere && state.editing.entryId
+    ? entries.find(e => e.id === state.editing.entryId) : null;
+
+  const rows = entries.map(e =>
+    '<div class="entry-row">'
+    + '<div class="entry-time">' + esc(e.time || '--:--') + '</div>'
+    + '<div class="entry-main"><div class="entry-items">' + esc(e.items) + '</div>'
+    + (e.memo ? '<div class="entry-memo">' + esc(e.memo) + '</div>' : '')
+    + '</div>'
+    + '<div class="entry-actions">'
+    + '<button type="button" data-action="open-edit" data-meal="' + mt.key + '" data-id="' + e.id + '">編集</button>'
+    + '<button type="button" data-action="delete-entry" data-meal="' + mt.key + '" data-id="' + e.id + '">削除</button>'
+    + '</div></div>'
+  ).join('');
+
+  const emptyMsg = (entries.length === 0 && !isEditingHere) ? '<div class="meal-empty">まだ記録がありません</div>' : '';
+  const formHtml = isEditingHere ? renderForm(date, mt.key, editingEntry) : '';
+  const addBtn = !isEditingHere
+    ? '<button type="button" class="add-btn" data-action="open-add" data-meal="' + mt.key + '">＋ ' + mt.label + 'を記録</button>'
+    : '';
+
+  return '<section class="meal-section" style="--meal-color:var(--meal-' + mt.key + ')">'
+    + '<h2 class="meal-label"><span class="meal-dot"></span>' + mt.label + '</h2>'
+    + rows + emptyMsg + formHtml + addBtn
+    + '</section>';
+}
+
+function renderHistoryRow(date) {
+  const day = getDay(date);
+  const wd = WD[parseDate(date).getDay()];
+  const selected = date === state.selectedDate;
+  const pills = MEAL_TYPES.map(mt => {
+    const arr = sortedEntries((day.meals && day.meals[mt.key]) || []);
+    if (arr.length === 0) return '';
+    const preview = arr.map(e => e.items.replace(/\n/g, ' / ')).join('、');
+    return '<div class="history-pill" style="color:var(--meal-' + mt.key + ')">'
+      + '<span class="tag">' + mt.label[0] + '</span>'
+      + '<span class="txt" style="color:var(--text-muted)">' + esc(preview) + '</span>'
+      + '</div>';
+  }).join('');
+  return '<div class="history-row' + (selected ? ' is-selected' : '') + '" data-action="select-history" data-date="' + date + '">'
+    + '<div class="history-date">' + dateShortLabel(date) + '<span class="history-weekday">（' + wd + '）</span></div>'
+    + '<div class="history-pills">' + pills + '</div>'
+    + '</div>';
+}
+
+function loggedDates() {
+  return Object.keys(state.store.days).filter(d => hasEntries(state.store.days[d])).sort().reverse();
+}
+
+function renderHistory() {
+  const dates = loggedDates();
+  const visible = dates.slice(0, state.historyVisibleCount);
+  const el = document.getElementById('historyList');
+  if (dates.length === 0) {
+    el.innerHTML = '<div class="meal-empty">記録が増えると、ここに一覧が表示されます</div>';
+    document.getElementById('moreHistoryBtn').style.display = 'none';
+    return;
+  }
+  el.innerHTML = visible.map(renderHistoryRow).join('');
+  document.getElementById('moreHistoryBtn').style.display = dates.length > visible.length ? '' : 'none';
+}
+
+function render() {
+  const date = state.selectedDate;
+  const day = getDay(date) || freshDay(date);
+
+  document.getElementById('dateLabel').textContent = dateLabel(date);
+  document.getElementById('nextDayBtn').disabled = date >= todayStr();
+  document.getElementById('todayJumpWrap').style.display = date === todayStr() ? 'none' : 'flex';
+
+  const streak = computeStreak();
+  const streakEl = document.getElementById('streakPill');
+  if (streak > 0) {
+    streakEl.style.display = '';
+    streakEl.textContent = streak + '日連続';
+  } else {
+    streakEl.style.display = 'none';
+  }
+
+  document.getElementById('mealSections').innerHTML = MEAL_TYPES.map(mt => renderMealSection(mt, date, day)).join('');
+  renderHistory();
+}
+
+function selectDate(date) {
+  state.selectedDate = date;
+  state.editing = null;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function focusForm() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.entry-form .f-items');
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  });
+}
+
+function saveEntry() {
+  const form = document.querySelector('.entry-form');
+  if (!form) return;
+  const date = form.dataset.date;
+  const meal = form.dataset.meal;
+  const entryId = form.dataset.entryId || null;
+  const items = form.querySelector('.f-items').value.trim();
+  const time = form.querySelector('.f-time').value || '';
+  const memo = form.querySelector('.f-memo').value.trim();
+
+  if (!items) { showToast('内容を入力してください'); return; }
+
+  const day = state.store.days[date] || freshDay(date);
+  if (!day.meals) day.meals = { breakfast: [], lunch: [], dinner: [], snack: [] };
+  if (!Array.isArray(day.meals[meal])) day.meals[meal] = [];
+
+  if (entryId) {
+    const idx = day.meals[meal].findIndex(e => e.id === entryId);
+    const entry = { id: entryId, time, items, memo };
+    if (idx >= 0) day.meals[meal][idx] = entry; else day.meals[meal].push(entry);
+  } else {
+    day.meals[meal].push({ id: uid(), time, items, memo });
+  }
+  day.date = date;
+  day.updatedAt = new Date().toISOString();
+  state.store.days[date] = day;
+
+  if (saveStore()) {
+    state.editing = null;
+    render();
+  }
+}
+
+function deleteEntry(date, meal, entryId) {
+  const day = state.store.days[date];
+  if (!day || !day.meals || !Array.isArray(day.meals[meal])) return;
+  if (!confirm('この記録を削除しますか？')) return;
+  day.meals[meal] = day.meals[meal].filter(e => e.id !== entryId);
+  day.updatedAt = new Date().toISOString();
+  if (saveStore()) render();
+}
+
+function buildExportText() {
+  const dates = loggedDates();
+  const lines = ['ごはん日記 書き出し（' + dateShortLabel(todayStr()) + ' 時点）', ''];
+  for (const date of dates) {
+    const day = getDay(date);
+    lines.push(dateShortLabel(date) + '（' + WD[parseDate(date).getDay()] + '）');
+    for (const mt of MEAL_TYPES) {
+      const arr = sortedEntries((day.meals && day.meals[mt.key]) || []);
+      for (const e of arr) {
+        const memo = e.memo ? '　※' + e.memo : '';
+        lines.push('  ' + mt.label + ' ' + (e.time || '--:--') + '　' + e.items.replace(/\n/g, ' / ') + memo);
+      }
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+async function shareOrDownload(filename, text, mime) {
+  try {
+    const file = new File([text], filename, { type: mime });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    console.error(e);
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) {
+    console.error(e);
+    showToast('書き出しに失敗しました');
+  }
+}
+
+function handleExport() {
+  const text = buildExportText();
+  if (!text.trim() || loggedDates().length === 0) { showToast('書き出す記録がまだありません'); return; }
+  shareOrDownload('gohan-nikki_' + todayStr() + '.txt', text, 'text/plain');
+}
+
+function handleBackup() {
+  if (loggedDates().length === 0) { showToast('バックアップする記録がまだありません'); return; }
+  const json = JSON.stringify(state.store, null, 2);
+  shareOrDownload('gohan-nikki-backup_' + todayStr() + '.json', json, 'application/json');
+}
+
+function handleRestoreFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      if (!data || typeof data !== 'object' || !data.days || typeof data.days !== 'object') {
+        throw new Error('invalid');
+      }
+      const count = Object.keys(data.days).length;
+      if (!confirm(count + '日分の記録を読み込みます。同じ日付は読み込んだ内容で上書きします。よろしいですか？')) return;
+      Object.keys(data.days).forEach(d => { state.store.days[d] = data.days[d]; });
+      if (saveStore()) {
+        render();
+        showToast('読み込みました');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('このファイルは読み込めませんでした');
+    }
+  };
+  reader.onerror = () => showToast('ファイルを読めませんでした');
+  reader.readAsText(file);
+}
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-action]');
+  if (!t) return;
+  const action = t.dataset.action;
+  if (action === 'prev-day') {
+    state.selectedDate = addDays(state.selectedDate, -1);
+    state.editing = null;
+    render();
+  } else if (action === 'next-day') {
+    if (state.selectedDate < todayStr()) {
+      state.selectedDate = addDays(state.selectedDate, 1);
+      state.editing = null;
+      render();
+    }
+  } else if (action === 'jump-today') {
+    state.selectedDate = todayStr();
+    state.editing = null;
+    render();
+  } else if (action === 'open-add') {
+    state.editing = { date: state.selectedDate, meal: t.dataset.meal, entryId: null };
+    render();
+    focusForm();
+  } else if (action === 'open-edit') {
+    state.editing = { date: state.selectedDate, meal: t.dataset.meal, entryId: t.dataset.id };
+    render();
+    focusForm();
+  } else if (action === 'cancel-form') {
+    state.editing = null;
+    render();
+  } else if (action === 'save-entry') {
+    saveEntry();
+  } else if (action === 'delete-entry') {
+    deleteEntry(state.selectedDate, t.dataset.meal, t.dataset.id);
+  } else if (action === 'select-history') {
+    selectDate(t.dataset.date);
+  } else if (action === 'show-more-history') {
+    state.historyVisibleCount += 14;
+    renderHistory();
+  } else if (action === 'export') {
+    handleExport();
+  } else if (action === 'backup') {
+    handleBackup();
+  } else if (action === 'restore') {
+    document.getElementById('restoreInput').click();
+  }
+});
+
+document.getElementById('restoreInput').addEventListener('change', ev => {
+  const file = ev.target.files && ev.target.files[0];
+  if (file) handleRestoreFile(file);
+  ev.target.value = '';
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const t = todayStr();
+  if (t === state.knownToday) return;
+  const wasOnToday = state.selectedDate === state.knownToday;
+  state.knownToday = t;
+  if (wasOnToday && !state.editing) state.selectedDate = t;
+  render();
+});
+
+state.store = loadStore();
+state.selectedDate = todayStr();
+state.knownToday = state.selectedDate;
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.error(e));
+  });
+}
+</script>
+</body>
+</html>
